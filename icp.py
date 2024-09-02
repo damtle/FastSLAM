@@ -42,7 +42,7 @@ def icp_matching(edges, scan, pose):
             plot_points(edges_matched, scan, fig)
 
         # perform RANSAC
-        min_error = np.float('inf')
+        min_error = float('inf')
         best_Rt = None
         best_Tt = None
         for _ in range(15):

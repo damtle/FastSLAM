@@ -13,7 +13,6 @@ from utils import absolute2relative, relative2absolute, degree2radian, visualize
 from icp import icp_matching
 from pso import optimize_particles_with_pso
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--map", type=str, default="scene-1", help="map that robot navigates in")
@@ -73,15 +72,15 @@ if __name__ == "__main__":
     # FastSLAM2.0
     for idx, (forward, turn) in enumerate(SCENE['controls']):
         R.move(turn=degree2radian(turn), forward=forward)
-        curr_odo = R.get_state()                            # 行走一步后curr_odo进行更新
+        curr_odo = R.get_state()  # 行走一步后curr_odo进行更新
         R.update_trajectory()
 
         z_star, free_grid_star, occupy_grid_star = R.sense()
         free_grid_offset_star = absolute2relative(free_grid_star, curr_odo)
         occupy_grid_offset_star = absolute2relative(occupy_grid_star, curr_odo)
 
-        # 先用粒子群优化整体粒子的位姿
-        optimized_particle_pose = optimize_particles_with_pso(idx, p, measurement_model, z_star, init_grid, ROBOT)
+        # # 先用粒子群优化整体粒子的位姿
+        # optimized_particle_pose = optimize_particles_with_pso(idx, p, measurement_model, z_star, init_grid, ROBOT)
 
         for i in range(NUMBER_OF_PARTICLES):
             prev_pose = p[i].get_state()
@@ -101,7 +100,7 @@ if __name__ == "__main__":
                 samples = np.random.multivariate_normal(pose_hat, MODE_SAMPLE_COV, NUMBER_OF_MODE_SAMPLES)
                 # Compute gaussain proposal
                 likelihoods = np.zeros(NUMBER_OF_MODE_SAMPLES)
- 
+
                 for j in range(NUMBER_OF_MODE_SAMPLES):
                     motion_prob = motion_model.motion_model(prev_odo, curr_odo, prev_pose, samples[j])
 
@@ -111,7 +110,7 @@ if __name__ == "__main__":
                     measurement_prob = measurement_model.measurement_model(z_star, z)
 
                     likelihoods[j] = motion_prob * measurement_prob
-                    
+
                 eta = np.sum(likelihoods)
                 if eta > 0:
                     pose_mean = np.sum(samples * likelihoods[:, np.newaxis], axis=0)
@@ -129,12 +128,12 @@ if __name__ == "__main__":
                 # Update weight
                 w[i] *= eta
                 print("scan: ", w[i])
-                
+
             else:
                 # Simulate a robot motion for each of these particles
                 x, y, theta = motion_model.sample_motion_model(prev_odo, curr_odo, prev_pose)
                 p[i].set_states(x, y, theta)
-        
+
                 # Calculate particle's weights depending on robot's measurement
                 z, _, _ = p[i].sense()
                 w[i] *= measurement_model.measurement_model(z_star, z)
