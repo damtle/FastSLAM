@@ -189,17 +189,65 @@ if __name__ == '__main__':
     true_path = np.loadtxt('true_path.txt')
     estimated_path = np.loadtxt('estimated_path.txt')
     estimated_path1 = np.loadtxt('estimated_path1.txt')
+    # 计算平移
     dxy = estimated_path[0, :] - true_path[0, :]
+    true_path += dxy
+
+
+    def rotation_matrix(v1, v2):
+        """计算两个二维向量之间的旋转矩阵"""
+        v1 = np.asarray(v1)
+        v2 = np.asarray(v2)
+        a = v1 / np.linalg.norm(v1)
+        b = v2 / np.linalg.norm(v2)
+        c = np.dot(a, b)  # 计算两个向量的余弦值
+        if np.isclose(c, 1.0):
+            # 如果两个向量相同，则返回单位矩阵
+            return np.eye(2)
+        elif np.isclose(c, -1.0):
+            # 如果两个向量相反，则返回180度旋转矩阵
+            return np.array([[-1, 0], [0, -1]])
+        # 计算旋转角度 theta
+        theta = np.arccos(c)
+        sin_theta = np.sin(theta)
+        cos_theta = c
+        # 构造二维旋转矩阵
+        R = np.array([
+            [cos_theta, -sin_theta],
+            [sin_theta, cos_theta]
+        ])
+        return R
+    # 计算旋转矩阵
+    end = 30
+    R = rotation_matrix(estimated_path[end, :] - estimated_path[0, :], true_path[end, :] - true_path[0, :])
+    R1 = rotation_matrix(estimated_path1[end, :] - estimated_path1[0, :], true_path[end, :] - true_path[0, :])
+    # 对 estimated_path 进行操作
+    for i in range(len(estimated_path)):
+        # 将点平移，使 true_path[0, :] 成为原点
+        estimated_path[i, :] -= true_path[0, :]
+        # 应用旋转矩阵
+        estimated_path[i, :] = R.dot(estimated_path[i, :])
+        # 平移回原来的位置
+        estimated_path[i, :] += true_path[0, :]
+
+    # 对 estimated_path1 进行操作
+    for i in range(len(estimated_path1)):
+        # 将点平移，使 true_path[0, :] 成为原点
+        estimated_path1[i, :] -= true_path[0, :]
+        # 应用旋转矩阵
+        estimated_path1[i, :] = R1.dot(estimated_path1[i, :])
+        # 平移回原来的位置
+        estimated_path1[i, :] += true_path[0, :]
 
     # 绘制轨迹
-    ax1.plot(true_path[:, 0] + dxy[0], true_path[:, 1] + dxy[1], "r--", label='True Path')  # 红色虚线
+    ax1.plot(true_path[:, 0], true_path[:, 1], "r--", label='True Path')  # 红色虚线
     ax1.plot(estimated_path1[:,0], estimated_path1[:,1], "b-", label='fastSlam_pso')  # 蓝色线条，带圆圈标记
     ax1.plot(estimated_path[:,0], estimated_path[:,1], "g-", label='fastSlam')  # 绿色线条，带星号标记
 
-    y1 = abs(estimated_path[:,0] - (true_path[:, 0] + dxy[0]))
-    y2 = abs(estimated_path[:,1] - (true_path[:, 1] + dxy[1]))
-    y3 = abs(estimated_path1[:,0] - (true_path[:, 0] + dxy[0]))
-    y4 = abs(estimated_path1[:,1] - (true_path[:, 1] + dxy[1]))
+    y1 = abs(estimated_path[:,0] - true_path[:, 0])
+    y2 = abs(estimated_path[:,1] - true_path[:, 1])
+    y3 = abs(estimated_path1[:,0] - true_path[:, 0])
+    y4 = abs(estimated_path1[:,1] - true_path[:, 1])
     ax2.plot(y1, 'g', label='Difference of fastSlam')
     ax3.plot(y2, 'g', label='Difference of fastSlam')
     ax2.plot(y3, 'b', label='Difference of fastSlam_pso')
