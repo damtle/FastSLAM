@@ -1,9 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 6))
-
-
 # Bresenhams Line Generation Algorithm
 # ref: https://www.geeksforgeeks.org/bresenhams-line-generation-algorithm/
 def bresenham(x1, y1, x2, y2, w, h):
@@ -105,6 +102,7 @@ def relative2absolute(position, states):
 
 
 def visualize(robot, particles, best_particle, radar_list, step, title, output_path, visualize=False):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 6))
     ax1.clear()
     ax2.clear()
     fig.suptitle("{}\n\n number of particles:{}, step:{}".format(title, len(particles), step + 1))
@@ -124,6 +122,7 @@ def visualize(robot, particles, best_particle, radar_list, step, title, output_p
     # draw map
     world_map = 1 - best_particle.grid
     ax1.imshow(world_map, cmap='gray')
+    np.savetxt('world_map.txt', world_map, fmt='%.10f')
     world_map = 1 - robot.grid
     ax2.imshow(world_map, cmap='gray')
 
@@ -134,12 +133,17 @@ def visualize(robot, particles, best_particle, radar_list, step, title, output_p
     # draw tragectory
     true_path = np.array(robot.trajectory)
     ax2.plot(true_path[:, 0], true_path[:, 1], "b")
+    np.savetxt('true_path.txt', true_path, fmt='%.10f')
     estimated_path = np.array(best_particle.trajectory)
     ax1.plot(estimated_path[:, 0], estimated_path[:, 1], "g")
+    np.savetxt('estimated_path.txt', estimated_path, fmt='%.10f')
 
+    array = np.empty((0, 2), dtype=float)
     # draw particles position
     for p in particles:
+        array = np.append(array, [np.array([p.x, p.y])], axis=0)
         ax1.plot(p.x, p.y, "go", markersize=1)
+    np.savetxt('array.txt', array, fmt='%.10f')
 
     # draw robot position
     ax2.plot(robot.x, robot.y, "bo")
@@ -150,3 +154,114 @@ def visualize(robot, particles, best_particle, radar_list, step, title, output_p
     if visualize:
         plt.draw()
         plt.pause(0.01)
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+if __name__ == '__main__':
+    # 设置图形大小和分辨率
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6), dpi=100)  # 增加dpi参数提高分辨率
+    ax1.clear()
+
+    # 设置标题
+    ax1.set_title("Estimated by Particles", fontsize=16)  # 增加字体大小
+
+    # 禁用坐标轴
+    ax1.axis("off")
+
+    # 加载地图数据
+    world_map = np.loadtxt('world_map.txt')
+    grid_size = world_map.shape
+    ax1.set_xlim(0, max(grid_size[1], grid_size[0]))
+    ax1.set_ylim(0, max(grid_size[1], grid_size[0]))
+
+    # 将地图变为白色
+    world_map.fill(255)
+    world_map[0][0] = 0  # 假设地图的左上角是黑色
+
+    # 显示地图
+    ax1.imshow(world_map, cmap='gray', interpolation='none')  # 添加插值参数以避免模糊
+
+    # 添加网格线
+    ax1.grid(True, color='black', linestyle='-', linewidth=0.5, which='both')  # 添加which参数
+
+    # 加载轨迹数据
+    true_path = np.loadtxt('true_path.txt')
+    estimated_path = np.loadtxt('estimated_path.txt')
+    estimated_path1 = np.loadtxt('estimated_path1.txt')
+    dxy = estimated_path[0, :] - true_path[0, :]
+
+    # 绘制轨迹
+    ax1.plot(true_path[:, 0] + dxy[0], true_path[:, 1] + dxy[1], "r--", label='True Path')  # 红色虚线
+    ax1.plot(estimated_path1[:,0], estimated_path1[:,1], "b-", label='fastSlam_pso')  # 蓝色线条，带圆圈标记
+    ax1.plot(estimated_path[:,0], estimated_path[:,1], "g-", label='fastSlam')  # 绿色线条，带星号标记
+
+    y1 = abs(estimated_path[:,0] - (true_path[:, 0] + dxy[0]))
+    y2 = abs(estimated_path[:,1] - (true_path[:, 1] + dxy[1]))
+    y3 = abs(estimated_path1[:,0] - (true_path[:, 0] + dxy[0]))
+    y4 = abs(estimated_path1[:,1] - (true_path[:, 1] + dxy[1]))
+    ax2.plot(y1, 'g', label='Difference of fastSlam')
+    ax3.plot(y2, 'g', label='Difference of fastSlam')
+    ax2.plot(y3, 'b', label='Difference of fastSlam_pso')
+    ax3.plot(y4, 'b', label='Difference of fastSlam_pso')
+
+    ax2.legend(loc='upper left')
+    ax2.set_title("Path Differences X")
+    ax2.set_xlabel("Index")
+    ax2.set_ylabel("Difference")
+
+    ax3.legend(loc='upper left')
+    ax3.set_title("Path Differences Y")
+    ax3.set_xlabel("Index")
+    ax3.set_ylabel("Difference")
+
+    # # 加载粒子位置数据
+    # array = np.loadtxt('array.txt')
+    # ax1.plot(array[:,0], array[:,1], "go", markersize=1, label='Particles')  # 绿色圆点
+
+    # 添加图例
+    ax1.legend(loc='best', fontsize=12)  # 选择合适的位置并设置字体大小
+
+    # 显示图形
+    plt.tight_layout()  # 自动调整子图参数，使之填充整个图像区域
+    fig.savefig('path_differences.png', dpi=300)  # 保存为PNG格式，DPI为300
+    plt.show()
+
+
+# if __name__ == '__main__':
+#     fig, ax1 = plt.subplots(1, 1, figsize=(10, 6))
+#     ax1.clear()
+#     # ax2.clear()
+#     ax1.set_title("Estimated by Particles")
+#     # ax2.set_title("Ground Truth")
+#     ax1.axis("off")
+#     # ax2.axis("off")
+#
+#
+#
+#     # draw map
+#     world_map = data = np.loadtxt('world_map.txt')
+#
+#     grid_size = world_map.shape
+#     ax1.set_xlim(0, max(grid_size[0], grid_size[1]))
+#     ax1.set_ylim(0, max(grid_size[0], grid_size[1]))
+#     world_map.fill(255)
+#     world_map[0][0] = 0
+#     ax1.imshow(world_map, cmap='gray')
+#     ax1.grid(True, color='black', linestyle='-', linewidth=0.5)
+#
+#     # draw tragectory
+#     true_path = np.loadtxt('true_path.txt')
+#     estimated_path = np.loadtxt('estimated_path.txt')
+#     estimated_path1 = np.loadtxt('estimated_path1.txt')
+#     dxy = estimated_path[0, :] - true_path[0, :]
+#     ax1.plot(true_path[:, 0] + dxy[0], true_path[:, 1] + dxy[1], "b")
+#     ax1.plot(estimated_path1[:, 0], estimated_path1[:, 1], "r")
+#     ax1.plot(estimated_path[:, 0], estimated_path[:, 1], "g")
+#
+#     array = np.loadtxt('array.txt')
+#     # draw particles position
+#     # for p in particles:
+#     #     array = np.append(array, [np.array([p.x, p.y])], axis=0)
+#     ax1.plot(array[:, 0], array[:, 1], "go", markersize=1)
+#     plt.show()

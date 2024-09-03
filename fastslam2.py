@@ -81,7 +81,7 @@ if __name__ == "__main__":
         occupy_grid_offset_star = absolute2relative(occupy_grid_star, curr_odo)
 
         # 先用粒子群优化整体粒子的位姿
-        optimized_particle_pose = optimize_particles_with_pso(idx, p, measurement_model, z_star, init_grid, ROBOT)
+        # optimized_particle_pose = optimize_particles_with_pso(idx, p, measurement_model, z_star, init_grid, ROBOT)
 
         for i in range(NUMBER_OF_PARTICLES):
             prev_pose = p[i].get_state()
